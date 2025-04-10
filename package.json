@@ -1,0 +1,15 @@
+{
+  "name": "real-time-communication-app",
+  "version": "1.0.0",
+  "description": "Real-time communication web application with video and voice recognition",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "cors": "^2.8.5",
+    "express": "^4.21.2",
+    "socket.io": "^4.8.1",
+    "uuid": "^9.0.1"
+  }
+}
