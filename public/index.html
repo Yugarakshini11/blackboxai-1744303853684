@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Real-Time Communication App</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="/socket.io/socket.io.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/css/styles.css">
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                    },
+                },
+            },
+        }
+    </script>
+</head>
+<body class="bg-gray-100 min-h-screen">
+    <!-- Home Screen -->
+    <div id="homeScreen" class="min-h-screen">
+        <!-- Header -->
+        <header class="bg-gradient-to-r from-blue-600 to-indigo-700 text-white py-8">
+            <div class="container mx-auto px-4">
+                <h1 class="text-4xl font-bold text-center mb-2">Real-Time Communication</h1>
+                <p class="text-center text-lg opacity-90">Connect instantly with video and voice recognition</p>
+            </div>
+        </header>
+
+        <!-- Main Content -->
+        <main class="container mx-auto px-4 py-8">
+            <!-- Video and Transcription Section -->
+            <div class="grid md:grid-cols-2 gap-8">
+                <!-- Video Feed -->
+                <div class="bg-white rounded-lg shadow-lg p-4">
+                    <h2 class="text-xl font-semibold mb-4">Live Video Feed</h2>
+                    <div class="relative aspect-video bg-gray-900 rounded-lg overflow-hidden">
+                        <div class="video-container h-[300px]">
+                            <video id="localVideo" autoplay playsinline muted class="w-full h-full object-cover"></video>
+                            <div id="mediaError" class="hidden error-message">
+                                <i class="fas fa-video-slash text-4xl mb-4"></i>
+                                <p class="text-lg mb-2">Unable to access camera</p>
+                                <p class="text-sm opacity-75">Please check your camera permissions</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Voice Recognition -->
+                <div class="bg-white rounded-lg shadow-lg p-4">
+                    <h2 class="text-xl font-semibold mb-4">Voice Recognition</h2>
+                    <div class="transcript-container">
+                        <div id="transcriptArea" class="space-y-2"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Room Controls -->
+            <div class="mt-8 bg-white rounded-lg shadow-lg p-6">
+                <h2 class="text-xl font-semibold mb-4">Room Management</h2>
+                <div class="grid md:grid-cols-2 gap-6">
+                    <!-- Create Room -->
+                    <div class="space-y-4">
+                        <h3 class="text-lg font-medium">Create New Room</h3>
+                        <button id="createRoomBtn" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-medium py-3 px-6 rounded-lg transition duration-150">
+                            <i class="fas fa-plus-circle mr-2"></i>Create Room
+                        </button>
+                    </div>
+
+                    <!-- Join Room -->
+                    <div class="space-y-4">
+                        <h3 class="text-lg font-medium">Join Existing Room</h3>
+                        <div class="flex gap-2">
+                            <input type="text" id="roomCodeInput" placeholder="Enter room code" 
+                                   class="flex-1 border border-gray-300 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500">
+                            <button id="joinRoomBtn" class="bg-green-600 hover:bg-green-700 text-white font-medium py-2 px-6 rounded-lg transition duration-150">
+                                <i class="fas fa-sign-in-alt mr-2"></i>Join
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- Room Screen (Initially Hidden) -->
+    <div id="roomScreen" class="hidden min-h-screen">
+        <div class="container mx-auto px-4 py-8">
+            <!-- Room Header -->
+            <div class="bg-white rounded-lg shadow-lg p-4 mb-8">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <h2 class="text-xl font-semibold">Room: <span id="roomCodeDisplay" class="text-blue-600"></span></h2>
+                        <p class="text-sm text-gray-600">Connected Users: <span id="userCount">1</span></p>
+                    </div>
+                    <button id="leaveRoomBtn" class="bg-red-600 hover:bg-red-700 text-white font-medium py-2 px-6 rounded-lg transition duration-150">
+                        <i class="fas fa-sign-out-alt mr-2"></i>Leave Room
+                    </button>
+                </div>
+            </div>
+
+            <!-- Room Content -->
+            <div class="grid md:grid-cols-2 gap-8">
+                <!-- Video Feed -->
+                <div class="bg-white rounded-lg shadow-lg p-4">
+                    <h3 class="text-lg font-semibold mb-4">Your Video</h3>
+                    <div class="relative aspect-video bg-gray-900 rounded-lg overflow-hidden">
+                        <video id="roomVideo" autoplay playsinline muted class="w-full h-full object-cover"></video>
+                    </div>
+                </div>
+
+                <!-- Chat/Transcript Area -->
+                <div class="bg-white rounded-lg shadow-lg p-4">
+                    <h3 class="text-lg font-semibold mb-4">Live Transcript</h3>
+                    <div id="roomTranscriptArea" class="h-[400px] bg-gray-50 rounded-lg p-4 overflow-y-auto space-y-2"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Notifications -->
+    <div id="notificationArea" class="fixed bottom-4 right-4 space-y-2"></div>
+
+    <!-- Loading Overlay -->
+    <div id="loadingOverlay" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+        <div class="bg-white rounded-lg p-6 text-center">
+            <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
+            <p class="mt-4 text-lg font-medium">Loading...</p>
+        </div>
+    </div>
+
+    <script src="js/main.js"></script>
+</body>
+</html>
